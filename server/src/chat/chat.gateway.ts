@@ -28,7 +28,9 @@ interface ChatMessage {
  */
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:3000', // Next.js client URL
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',')
+      : ['http://localhost:3000'],
     credentials: true,
   },
 })

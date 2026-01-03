@@ -40,7 +40,10 @@ export function Chat() {
    */
   useEffect(() => {
     // Create socket connection to the NestJS server
-    const newSocket = io("http://localhost:3001", {
+    // Use environment variable for production, fallback to localhost for development
+    const serverUrl =
+      process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3001";
+    const newSocket = io(serverUrl, {
       transports: ["websocket"],
     });
 

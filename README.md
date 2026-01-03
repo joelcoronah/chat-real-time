@@ -28,6 +28,10 @@ chat-real-time/
     └── package.json
 ```
 
+## Deployment
+
+For free deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
+
 ## Getting Started
 
 ### Prerequisites
@@ -85,11 +89,13 @@ Navigate to `http://localhost:3000` and enter a username to start chatting!
 ## Technology Stack
 
 ### Backend (Server)
+
 - **NestJS** - Progressive Node.js framework
 - **Socket.io** - Real-time bidirectional event-based communication
 - **TypeScript** - Type-safe JavaScript
 
 ### Frontend (Client)
+
 - **Next.js 14** - React framework with App Router
 - **React 18** - UI library
 - **Socket.io Client** - WebSocket client
@@ -101,18 +107,24 @@ Navigate to `http://localhost:3000` and enter a username to start chatting!
 ### Client → Server Events
 
 - `join` - Join the chat with a username
+
   ```typescript
-  socket.emit('join', { username: 'John' })
+  socket.emit("join", { username: "John" });
   ```
 
 - `message` - Send a text message
+
   ```typescript
-  socket.emit('message', { message: 'Hello!', username: 'John' })
+  socket.emit("message", { message: "Hello!", username: "John" });
   ```
 
 - `image` - Send an image message
   ```typescript
-  socket.emit('image', { imageUrl: 'data:image/...', username: 'John', caption: 'Optional caption' })
+  socket.emit("image", {
+    imageUrl: "data:image/...",
+    username: "John",
+    caption: "Optional caption",
+  });
   ```
 
 ### Server → Client Events
@@ -147,13 +159,15 @@ npm run start      # Run production server
 ### Change Server Port
 
 Edit `server/src/main.ts`:
+
 ```typescript
-await app.listen(3001) // Change to your desired port
+await app.listen(3001); // Change to your desired port
 ```
 
 ### Change Client Port
 
 Edit `client/package.json`:
+
 ```json
 {
   "scripts": {
@@ -173,4 +187,3 @@ MIT
 ## Contributing
 
 Feel free to submit issues and enhancement requests!
-

@@ -8,17 +8,24 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Get port from environment variable or default to 3001
+  const port = process.env.PORT || 3001;
+
+  // Get allowed origins from environment variable or default to localhost
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000'];
+
   // Enable CORS for WebSocket connections
   // This allows the Next.js client to connect to the server
   app.enableCors({
-    origin: 'http://localhost:3000', // Next.js default port
+    origin: allowedOrigins,
     credentials: true,
   });
 
-  // Start the server on port 3001
-  await app.listen(3001);
-  console.log('🚀 Chat server is running on http://localhost:3001');
+  // Start the server
+  await app.listen(port);
+  console.log(`🚀 Chat server is running on port ${port}`);
 }
 
 bootstrap();
-
