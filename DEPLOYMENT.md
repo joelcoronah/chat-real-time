@@ -1,6 +1,7 @@
 # Deployment Guide - Free Hosting
 
 This guide will help you deploy your real-time chat application for free using:
+
 - **Vercel** (Frontend - Next.js)
 - **Railway** or **Render** (Backend - NestJS)
 
@@ -38,13 +39,20 @@ git push -u origin main
 3. **Select Repository**: Choose your `chat-real-time` repository
 4. **Configure**:
    - **Root Directory**: Set to `server`
-   - **Build Command**: `npm install && npm run build`
+   - **Build Command**: `npm install && npm run build` (Railway will use `nixpacks.toml` if present)
    - **Start Command**: `npm run start:prod`
 5. **Environment Variables**:
    - `PORT`: Railway sets this automatically
    - `ALLOWED_ORIGINS`: `https://your-frontend.vercel.app` (you'll update this after deploying frontend)
 6. **Get URL**: Railway will provide a URL like `https://your-app.up.railway.app`
 7. **Copy the URL** - you'll need it for the frontend
+
+**⚠️ If you get package-lock.json sync errors:**
+
+- Delete `server/package-lock.json` locally
+- Run `cd server && npm install` to regenerate it
+- Commit and push the new lock file
+- Redeploy on Railway
 
 ### Option B: Render
 
@@ -91,6 +99,7 @@ git push -u origin main
 After deploying the frontend, you need to update the backend's CORS settings:
 
 ### For Railway:
+
 1. Go to your Railway project
 2. Click on "Variables" tab
 3. Update `ALLOWED_ORIGINS` to include your Vercel URL:
@@ -100,6 +109,7 @@ After deploying the frontend, you need to update the backend's CORS settings:
 4. Railway will automatically redeploy
 
 ### For Render:
+
 1. Go to your Render dashboard
 2. Click on your service
 3. Go to "Environment" tab
@@ -147,16 +157,19 @@ If you see connection errors:
 ## Free Tier Limits
 
 ### Vercel
+
 - ✅ Unlimited deployments
 - ✅ 100GB bandwidth/month
 - ✅ Perfect for Next.js
 
 ### Railway
+
 - ✅ $5 free credit/month
 - ✅ 500 hours of usage
 - ✅ Auto-sleeps after inactivity (wakes on request)
 
 ### Render
+
 - ✅ Free tier available
 - ⚠️ Spins down after 15 minutes of inactivity (takes ~30s to wake)
 - ✅ 750 hours/month
@@ -183,8 +196,8 @@ If you see connection errors:
 ## Support
 
 If you encounter issues:
+
 1. Check the logs on your hosting platform
 2. Verify environment variables are set correctly
 3. Make sure both frontend and backend are deployed
 4. Check that CORS allows your frontend URL
-
