@@ -56,7 +56,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Find and remove the disconnected user
     const username = Array.from(this.connectedUsers.entries()).find(
-      ([_, socketId]) => socketId === client.id,
+      ([, socketId]) => socketId === client.id,
     )?.[0];
 
     if (username) {
