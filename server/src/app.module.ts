@@ -11,4 +11,3 @@ import { ChatGateway } from './chat/chat.gateway';
   providers: [ChatGateway],
 })
 export class AppModule {}
-
