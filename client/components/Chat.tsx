@@ -1,22 +1,22 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
-import { io, Socket } from 'socket.io-client'
-import { ChatMessages } from './ChatMessages'
-import { ChatInput } from './ChatInput'
-import { UsernameModal } from './UsernameModal'
+import { useState, useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+import { ChatMessages } from "./ChatMessages";
+import { ChatInput } from "./ChatInput";
+import { UsernameModal } from "./UsernameModal";
 
 /**
  * Interface for chat messages.
  * Matches the server-side ChatMessage interface.
  */
 interface ChatMessage {
-  id: string
-  username: string
-  message: string
-  timestamp: Date
-  imageUrl?: string
-  type: 'text' | 'image'
+  id: string;
+  username: string;
+  message: string;
+  timestamp: Date;
+  imageUrl?: string;
+  type: "text" | "image" | "system"; // Added system type for join/leave notifications
 }
 
 /**
@@ -24,12 +24,13 @@ interface ChatMessage {
  * Manages WebSocket connection, user authentication, and message handling.
  */
 export function Chat() {
-  const [socket, setSocket] = useState<Socket | null>(null)
-  const [username, setUsername] = useState<string>('')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [isConnected, setIsConnected] = useState(false)
-  const [showUsernameModal, setShowUsernameModal] = useState(true)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [username, setUsername] = useState<string>("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [showUsernameModal, setShowUsernameModal] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const usernameRef = useRef<string>(""); // Ref to track username for event handlers
 
   /**
    * Initialize socket connection when component mounts.
@@ -37,54 +38,76 @@ export function Chat() {
    */
   useEffect(() => {
     // Create socket connection to the NestJS server
-    const newSocket = io('http://localhost:3001', {
-      transports: ['websocket'],
-    })
+    const newSocket = io("http://localhost:3001", {
+      transports: ["websocket"],
+    });
 
     // Handle connection events
-    newSocket.on('connect', () => {
-      console.log('✅ Connected to server')
-      setIsConnected(true)
-    })
+    newSocket.on("connect", () => {
+      console.log("✅ Connected to server");
+      setIsConnected(true);
+    });
 
-    newSocket.on('disconnect', () => {
-      console.log('❌ Disconnected from server')
-      setIsConnected(false)
-    })
+    newSocket.on("disconnect", () => {
+      console.log("❌ Disconnected from server");
+      setIsConnected(false);
+    });
 
     // Handle incoming messages
-    newSocket.on('message', (message: ChatMessage) => {
+    newSocket.on("message", (message: ChatMessage) => {
       // Convert timestamp string to Date object if needed
       const msg = {
         ...message,
         timestamp: new Date(message.timestamp),
-      }
-      setMessages((prev) => [...prev, msg])
-    })
+      };
+      setMessages((prev) => [...prev, msg]);
+    });
 
     // Handle user join/leave notifications
-    newSocket.on('userJoined', (data: { username: string }) => {
-      console.log(`👤 User joined: ${data.username}`)
-    })
+    newSocket.on("userJoined", (data: { username: string }) => {
+      console.log(`👤 User joined: ${data.username}`);
+      // Don't show join notification for the current user (they know they joined)
+      if (usernameRef.current === data.username) {
+        return; // Skip own join notification
+      }
+      // Create a system message for other users joining
+      const systemMessage: ChatMessage = {
+        id: `system-join-${Date.now()}-${Math.random()}`,
+        username: "System",
+        message: `${data.username} joined the chat`,
+        timestamp: new Date(),
+        type: "system",
+      };
+      setMessages((prev) => [...prev, systemMessage]);
+    });
 
-    newSocket.on('userLeft', (data: { username: string }) => {
-      console.log(`👋 User left: ${data.username}`)
-    })
+    newSocket.on("userLeft", (data: { username: string }) => {
+      console.log(`👋 User left: ${data.username}`);
+      // Create a system message for user leave
+      const systemMessage: ChatMessage = {
+        id: `system-left-${Date.now()}-${Math.random()}`,
+        username: "System",
+        message: `${data.username} left the chat`,
+        timestamp: new Date(),
+        type: "system",
+      };
+      setMessages((prev) => [...prev, systemMessage]);
+    });
 
-    setSocket(newSocket)
+    setSocket(newSocket);
 
     // Cleanup: disconnect socket when component unmounts
     return () => {
-      newSocket.close()
-    }
-  }, [])
+      newSocket.close();
+    };
+  }, []);
 
   /**
    * Scroll to bottom when new messages arrive.
    */
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   /**
    * Handle username submission.
@@ -92,24 +115,26 @@ export function Chat() {
    */
   const handleUsernameSubmit = (name: string) => {
     if (name.trim() && socket) {
-      setUsername(name.trim())
-      setShowUsernameModal(false)
+      const trimmedName = name.trim();
+      setUsername(trimmedName);
+      usernameRef.current = trimmedName; // Update ref for event handlers
+      setShowUsernameModal(false);
       // Emit join event to server
-      socket.emit('join', { username: name.trim() })
+      socket.emit("join", { username: trimmedName });
     }
-  }
+  };
 
   /**
    * Handle sending text messages.
    */
   const handleSendMessage = (message: string) => {
     if (message.trim() && socket && username) {
-      socket.emit('message', {
+      socket.emit("message", {
         message: message.trim(),
         username,
-      })
+      });
     }
-  }
+  };
 
   /**
    * Handle sending image messages.
@@ -117,21 +142,21 @@ export function Chat() {
    */
   const handleSendImage = (imageFile: File, caption?: string) => {
     if (socket && username) {
-      const reader = new FileReader()
-      
+      const reader = new FileReader();
+
       reader.onloadend = () => {
-        const imageUrl = reader.result as string
+        const imageUrl = reader.result as string;
         // Emit image message to server
-        socket.emit('image', {
+        socket.emit("image", {
           imageUrl,
           username,
           caption,
-        })
-      }
-      
-      reader.readAsDataURL(imageFile)
+        });
+      };
+
+      reader.readAsDataURL(imageFile);
     }
-  }
+  };
 
   // Show username modal if not connected or username not set
   if (showUsernameModal || !username) {
@@ -140,7 +165,7 @@ export function Chat() {
         onSubmit={handleUsernameSubmit}
         isOpen={showUsernameModal}
       />
-    )
+    );
   }
 
   return (
@@ -150,14 +175,12 @@ export function Chat() {
         <div className="flex items-center gap-2">
           <div
             className={`h-3 w-3 rounded-full ${
-              isConnected ? 'bg-green-400' : 'bg-red-400'
+              isConnected ? "bg-green-400" : "bg-red-400"
             }`}
           />
           <h1 className="text-xl font-semibold text-white">Real-Time Chat</h1>
         </div>
-        <div className="text-sm text-white/80">
-          {username}
-        </div>
+        <div className="text-sm text-white/80">{username}</div>
       </div>
 
       {/* Messages area */}
@@ -173,6 +196,5 @@ export function Chat() {
         isConnected={isConnected}
       />
     </div>
-  )
+  );
 }
-

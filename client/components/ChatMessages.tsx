@@ -11,7 +11,7 @@ interface ChatMessage {
   message: string
   timestamp: Date
   imageUrl?: string
-  type: 'text' | 'image'
+  type: 'text' | 'image' | 'system' // Added system type for join/leave notifications
 }
 
 interface ChatMessagesProps {
@@ -45,6 +45,17 @@ export function ChatMessages({ messages, currentUsername }: ChatMessagesProps) {
   return (
     <div className="space-y-4">
       {messages.map((message) => {
+        // Handle system messages (join/leave notifications)
+        if (message.type === 'system') {
+          return (
+            <div key={message.id} className="flex justify-center">
+              <div className="rounded-full bg-gray-100 px-4 py-1.5">
+                <p className="text-xs text-gray-500">{message.message}</p>
+              </div>
+            </div>
+          )
+        }
+
         const isOwnMessage = message.username === currentUsername
 
         return (

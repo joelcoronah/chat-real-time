@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent } from "react";
 
 interface UsernameModalProps {
-  onSubmit: (username: string) => void
-  isOpen: boolean
+  onSubmit: (username: string) => void;
+  isOpen: boolean;
 }
 
 /**
@@ -12,22 +12,22 @@ interface UsernameModalProps {
  * Shown when user first loads the chat or needs to set their username.
  */
 export function UsernameModal({ onSubmit, isOpen }: UsernameModalProps) {
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState("");
 
   /**
    * Handle form submission.
    * Validates username and calls onSubmit callback.
    */
   const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (username.trim().length >= 2) {
-      onSubmit(username.trim())
+      onSubmit(username.trim());
     } else {
-      alert('Username must be at least 2 characters long')
+      alert("Username must be at least 2 characters long");
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -45,7 +45,7 @@ export function UsernameModal({ onSubmit, isOpen }: UsernameModalProps) {
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Enter your username"
             autoFocus
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full rounded-lg text-gray-600 border border-gray-300 px-4 py-2 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
             minLength={2}
             maxLength={20}
           />
@@ -59,6 +59,5 @@ export function UsernameModal({ onSubmit, isOpen }: UsernameModalProps) {
         </form>
       </div>
     </div>
-  )
+  );
 }
-
