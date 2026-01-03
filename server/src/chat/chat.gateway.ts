@@ -53,11 +53,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   handleDisconnect(client: Socket) {
     console.log(`❌ Client disconnected: ${client.id}`);
-    
+
     // Find and remove the disconnected user
-    const username = Array.from(this.connectedUsers.entries())
-      .find(([_, socketId]) => socketId === client.id)?.[0];
-    
+    const username = Array.from(this.connectedUsers.entries()).find(
+      ([_, socketId]) => socketId === client.id,
+    )?.[0];
+
     if (username) {
       this.connectedUsers.delete(username);
       // Notify other clients that a user left
@@ -75,18 +76,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const { username } = data;
-    
+
     // Store the user's socket ID
     this.connectedUsers.set(username, client.id);
-    
+
     // Store username in socket data for later use
     client.data.username = username;
-    
+
     console.log(`👤 User joined: ${username}`);
-    
+
     // Notify all clients that a new user joined
     this.server.emit('userJoined', { username });
-    
+
     // Send list of connected users to the new client
     const users = Array.from(this.connectedUsers.keys());
     client.emit('connectedUsers', { users });
@@ -102,7 +103,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const { message, username } = data;
-    
+
     // Create message object with unique ID and timestamp
     const chatMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random()}`,
@@ -111,9 +112,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       timestamp: new Date(),
       type: 'text',
     };
-    
+
     console.log(`💬 Message from ${chatMessage.username}: ${message}`);
-    
+
     // Broadcast message to all connected clients
     this.server.emit('message', chatMessage);
   }
@@ -124,11 +125,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   @SubscribeMessage('image')
   handleImage(
-    @MessageBody() data: { imageUrl: string; username: string; caption?: string },
+    @MessageBody()
+    data: { imageUrl: string; username: string; caption?: string },
     @ConnectedSocket() client: Socket,
   ) {
     const { imageUrl, username, caption } = data;
-    
+
     // Create message object for image
     const chatMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random()}`,
@@ -138,11 +140,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       imageUrl,
       type: 'image',
     };
-    
+
     console.log(`🖼️ Image from ${chatMessage.username}`);
-    
+
     // Broadcast image message to all connected clients
     this.server.emit('message', chatMessage);
   }
-}
 
+  /**
+   * Handles typing indicators from clients.
+   * Broadcasts typing status to all other clients (not the sender).
+   */
+  @SubscribeMessage('typing')
+  handleTyping(
+    @MessageBody() data: { username: string; isTyping: boolean },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const { username, isTyping } = data;
+    const typingUsername = username || client.data.username || 'Anonymous';
+
+    // Broadcast typing status to all clients except the sender
+    client.broadcast.emit('typing', {
+      username: typingUsername,
+      isTyping,
+    });
+  }
+}

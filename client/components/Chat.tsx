@@ -29,8 +29,10 @@ export function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(true);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const usernameRef = useRef<string>(""); // Ref to track username for event handlers
+  const typingTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   /**
    * Initialize socket connection when component mounts.
@@ -94,10 +96,56 @@ export function Chat() {
       setMessages((prev) => [...prev, systemMessage]);
     });
 
+    // Handle typing indicators
+    newSocket.on("typing", (data: { username: string; isTyping: boolean }) => {
+      setTypingUsers((prev) => {
+        const newSet = new Set(prev);
+
+        if (data.isTyping) {
+          // Add user to typing set
+          newSet.add(data.username);
+
+          // Clear existing timeout for this user
+          const existingTimeout = typingTimeoutRef.current.get(data.username);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+          }
+
+          // Set timeout to remove typing indicator after 3 seconds of inactivity
+          const timeout = setTimeout(() => {
+            setTypingUsers((current) => {
+              const updated = new Set(current);
+              updated.delete(data.username);
+              return updated;
+            });
+            typingTimeoutRef.current.delete(data.username);
+          }, 3000);
+
+          typingTimeoutRef.current.set(data.username, timeout);
+        } else {
+          // Remove user from typing set
+          newSet.delete(data.username);
+
+          // Clear timeout if exists
+          const existingTimeout = typingTimeoutRef.current.get(data.username);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+            typingTimeoutRef.current.delete(data.username);
+          }
+        }
+
+        return newSet;
+      });
+    });
+
     setSocket(newSocket);
 
     // Cleanup: disconnect socket when component unmounts
     return () => {
+      // Clear all typing timeouts
+      const timeouts = typingTimeoutRef.current;
+      timeouts.forEach((timeout) => clearTimeout(timeout));
+      timeouts.clear();
       newSocket.close();
     };
   }, []);
@@ -133,6 +181,8 @@ export function Chat() {
         message: message.trim(),
         username,
       });
+      // Stop typing indicator when message is sent
+      socket.emit("typing", { username, isTyping: false });
     }
   };
 
@@ -155,6 +205,16 @@ export function Chat() {
       };
 
       reader.readAsDataURL(imageFile);
+    }
+  };
+
+  /**
+   * Handle typing status changes.
+   * Emits typing events to the server.
+   */
+  const handleTyping = (isTyping: boolean) => {
+    if (socket && username) {
+      socket.emit("typing", { username, isTyping });
     }
   };
 
@@ -185,7 +245,11 @@ export function Chat() {
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 chat-scrollbar">
-        <ChatMessages messages={messages} currentUsername={username} />
+        <ChatMessages
+          messages={messages}
+          currentUsername={username}
+          typingUsers={Array.from(typingUsers)}
+        />
         <div ref={messagesEndRef} />
       </div>
 
@@ -193,6 +257,7 @@ export function Chat() {
       <ChatInput
         onSendMessage={handleSendMessage}
         onSendImage={handleSendImage}
+        onTyping={handleTyping}
         isConnected={isConnected}
       />
     </div>

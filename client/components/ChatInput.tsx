@@ -1,11 +1,12 @@
-'use client'
+"use client";
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from "react";
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void
-  onSendImage: (imageFile: File, caption?: string) => void
-  isConnected: boolean
+  onSendMessage: (message: string) => void;
+  onSendImage: (imageFile: File, caption?: string) => void;
+  onTyping: (isTyping: boolean) => void;
+  isConnected: boolean;
 }
 
 /**
@@ -15,70 +16,134 @@ interface ChatInputProps {
 export function ChatInput({
   onSendMessage,
   onSendImage,
+  onTyping,
   isConnected,
 }: ChatInputProps) {
-  const [message, setMessage] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [message, setMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingEmitRef = useRef<boolean>(false);
+
+  /**
+   * Emit typing status to server.
+   * Uses debouncing to avoid too many events.
+   */
+  const emitTyping = (isTyping: boolean) => {
+    // Only emit if status changed
+    if (lastTypingEmitRef.current === isTyping) {
+      return;
+    }
+
+    lastTypingEmitRef.current = isTyping;
+    onTyping(isTyping);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // If user stopped typing, clear the timeout
+    if (!isTyping) {
+      typingTimeoutRef.current = null;
+      return;
+    }
+
+    // Set timeout to stop typing indicator after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      lastTypingEmitRef.current = false;
+      onTyping(false);
+      typingTimeoutRef.current = null;
+    }, 2000);
+  };
+
+  /**
+   * Cleanup timeout on unmount.
+   */
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  /**
+   * Handle input change.
+   * Emits typing status when user types.
+   */
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    // Emit typing status
+    if (value.trim().length > 0) {
+      emitTyping(true);
+    } else {
+      emitTyping(false);
+    }
+  };
 
   /**
    * Handle form submission.
    * Sends the message and clears the input.
    */
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (message.trim() && isConnected) {
-      onSendMessage(message)
-      setMessage('')
+      onSendMessage(message);
+      setMessage("");
+      // Stop typing indicator when message is sent
+      emitTyping(false);
     }
-  }
+  };
 
   /**
    * Handle Enter key press.
    * Sends message on Enter, new line on Shift+Enter.
    */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit(e)
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
-  }
+  };
 
   /**
    * Handle image file selection.
    * Reads the file and sends it as an image message.
    */
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file && isConnected) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file')
-        return
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
+        return;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size must be less than 5MB')
-        return
+        alert("Image size must be less than 5MB");
+        return;
       }
 
       // Send image with optional caption
-      const caption = prompt('Add a caption (optional):')
-      onSendImage(file, caption || undefined)
+      const caption = prompt("Add a caption (optional):");
+      onSendImage(file, caption || undefined);
     }
 
     // Reset file input
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
   /**
    * Trigger file input click.
    */
   const handleImageButtonClick = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   return (
     <div className="border-t border-gray-200 bg-gray-50 p-4">
@@ -119,12 +184,12 @@ export function ChatInput({
         {/* Message textarea */}
         <textarea
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={
             isConnected
-              ? 'Type a message... (Enter to send, Shift+Enter for new line)'
-              : 'Connecting...'
+              ? "Type a message... (Enter to send, Shift+Enter for new line)"
+              : "Connecting..."
           }
           disabled={!isConnected}
           rows={1}
@@ -155,6 +220,5 @@ export function ChatInput({
         </button>
       </form>
     </div>
-  )
+  );
 }
-
